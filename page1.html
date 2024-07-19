@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Narrative Visualization Project</title>
+        <style>
+            body {
+            background-color: rgb(209, 250, 255);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 1200px;
+            margin: 0;
+            }
+
+            h2 {
+            text-align: center;
+            }
+            
+            .chart {
+            width: 90%;
+            max-width: 1800px;
+            height: 800px;
+            background-color: #e7e7e7;
+            margin-bottom: 50px;
+            position: relative; /* for popup */
+            }
+
+            .bar {
+            fill: rgb(2, 0, 116);
+            }
+            .bar:hover {
+            fill: rgb(0, 238, 255);
+            }
+            .popup {
+            position: absolute;
+            background-color: rgb(0, 238, 255);
+            border: 1px solid #000000;
+            padding: 10px;
+            display: none;
+            pointer-events: none; /* prevent interfering */
+            }
+
+            #content {
+            text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+
+        <div id="content">
+        <h1>Changes in Birthrates</h1>
+        <p>World War II left many countries economically torn and populations devastated.<br>
+            In the following years, many of these war-torn countries rebuilt their economies.<br>
+            With the higher standards of living and improved economic conditions, birthrates increased and populations grew.<br>
+            These population growths led to a larger workforce and even more economic growth.
+        </p>
+
+        <h1 id="chartTitle">Birthrates of Top 15 Countries by Total GDP(2022): 2022</h1>
+        <p>Countries ordered by GDP from highest to lowest</p>
+        
+        <div class="chart" id="chart">
+        </div>
+
+        <div class="popup" id="annotationPopup">
+            <p id="annotationText"></p>
+        </div>
+
+        <div id="navigation">
+            <button id="prevButton">Previous</button>
+            <button id="nextButton">Next</button>
+        </div>
+        </div>
+
+        <script>
+            const birthrates = [
+                { country: 'United States', value: 2.48 },
+                { country: 'China', value: 6.085 },
+                { country: 'Germany', value: 2.03 },
+                { country: 'Japan', value: 2.13 },
+                { country: 'India', value: 5.624 },
+                { country: 'United Kingdom', value: 2.44 },
+                { country: 'France', value: 2.55 },
+                { country: 'Brazil', value: 4.972 },
+                { country: 'Italy', value: 2.38 },
+                { country: 'Canada', value: 2.258 },
+                { country: 'Russian Federation', value: 1.99 },
+                { country: 'Mexico', value: 6.551 },
+                { country: 'Australia', value: 2.859 },
+                { country: 'South Korea', value: 4.53 },
+                { country: 'Spain', value: 2.84 }
+            ];
+
+            const svg = d3.select("#chart")
+                          .append("svg")
+                          .attr("width", "100%")
+                          .attr("height", "100%")
+                          .attr("viewBox", `0 0 1280 600`);
+
+            drawChart(birthrates);
+
+            function drawChart(data) {
+                const chartWidth = 800;
+                const chartHeight = 600;
+                const margin = { top: -10, right: 20, bottom: 10, left: 60 };
+                const innerWidth = 1000;
+                const innerHeight = chartHeight - margin.top - margin.bottom;
+
+                const chart = svg.append("g")
+                                 .attr("transform", `translate(${margin.left},${margin.top})`);
+
+                const xScale = d3.scaleBand()
+                                 .domain(data.map(d => d.country))
+                                 .range([0, innerWidth])
+                                 .padding(0.1);
+ 
+                const yScale = d3.scaleLinear()
+                                 .domain([0, 7])
+                                 .nice()
+                                 .range([innerHeight, 0]);
+
+                chart.append("g")
+                     .attr("transform", `translate(0,${innerHeight})`)
+                     .call(d3.axisBottom(xScale))
+                     .selectAll("text")
+                     .style("text-anchor", "middle");
+
+                chart.append("g")
+                     .call(d3.axisLeft(yScale));
+
+                const bars = chart.selectAll(".bar")
+                                  .data(data)
+                                  .enter()
+                                  .append("rect")
+                                  .attr("class", "bar")
+                                  .attr("x", d => xScale(d.country))
+                                  .attr("y", d => yScale(d.value))
+                                  .attr("width", xScale.bandwidth())
+                                  .attr("height", d => innerHeight - yScale(d.value))
+                                  .on("mouseover", function(d, data) {
+                                    const popup = d3.select("#annotationPopup");
+                                    const [x, y] = d3.pointer(d, this);
+                                    popup.style("left", `${x * 1.4}px`)
+                                         .style("bottom", "200px")
+                                         .style("display", "block")
+                                         .select("#annotationText")
+                                         .text(`${data.country}: ${data.value}`);
+                                })
+                                .on("mouseout", function() {
+                                    d3.select("#annotationPopup").style("display", "none");
+                                });
+
+                chart.append("text")
+                     .attr("x", innerWidth / 2)
+                     .attr("y", innerHeight + margin.top + 40)
+                     .style("text-anchor", "middle")
+                     .text("Countries");
+
+                chart.append("text")
+                     .attr("transform", "rotate(-90)")
+                     .attr("x", -innerHeight / 2)
+                     .attr("y", -margin.left)
+                     .attr("dy", "1em")
+                     .style("text-anchor", "middle")
+                     .text("Birthrate");
+
+                const lineY = yScale(2.1);
+                chart.append("line")
+                     .attr("x1", 0)
+                     .attr("y1", lineY)
+                     .attr("x2", innerWidth + 20)
+                     .attr("y2", lineY)
+                     .attr("stroke", "red")
+                     .attr("stroke-width", 2);
+
+                chart.append("text")
+                     .attr("x", 1020)
+                     .attr("y", lineY)
+                     .text("Rate needed to prevent decline: 2.1")
+                     .attr("font-family", "sans-serif")
+                     .attr("font-size", "12px")
+                     .attr("fill", "black");
+            }
+
+            document.getElementById('prevButton').addEventListener('click', function() {
+                window.location.href = 'previous_page_url_here';
+            });
+
+            document.getElementById('nextButton').addEventListener('click', function() {
+                window.location.href = 'next_page_url_here';
+            });
+
+            prevButton.disabled = true;
+
+        </script>
+    </body>
+</html>
